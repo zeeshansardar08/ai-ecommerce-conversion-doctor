@@ -9,7 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "cheerio": "^1.1.2",
     "next": "16.1.6",
+    "openai": "^4.104.0",
+    "playwright": "^1.54.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
