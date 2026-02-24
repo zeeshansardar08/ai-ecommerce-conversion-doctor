@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Ecommerce Conversion Doctor
 
-## Getting Started
+MVP Next.js app that audits a single ecommerce page URL and returns a structured CRO report using OpenAI.
 
-First, run the development server:
+## Features
+
+- URL audit (Shopify/WooCommerce or any ecommerce page)
+- Overall score + category scores
+- Top 3 prioritized fixes
+- 8-12 detailed findings
+- Lead capture gate before unlocking results
+- Supabase storage for reports and leads
+- Simple IP and email rate limiting (3 audits per 24h)
+
+## Tech Stack
+
+- Next.js 14+ (App Router)
+- TypeScript + Tailwind
+- OpenAI API (structured JSON)
+- Playwright with fetch + cheerio fallback
+- Supabase Postgres
+
+## Local Setup (Windows Friendly)
+
+1) Install dependencies
+
+```bash
+npm install
+```
+
+2) Create a `.env.local` file
+
+```
+OPENAI_API_KEY=your_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+IP_HASH_SALT=any_random_string
+USE_MOCK_AI=false
+```
+
+Restart the dev server after changing environment variables.
+
+3) Create Supabase tables (SQL)
+
+```sql
+create extension if not exists "pgcrypto";
+
+create table if not exists public.reports (
+	id uuid primary key default gen_random_uuid(),
+	created_at timestamptz not null default now(),
+	url text not null,
+	page_type text not null check (page_type in ('product','home','cart','other')),
+	status text not null default 'queued' check (status in ('queued','running','done','failed')),
+	error text null,
+	detected_platform text null check (detected_platform in ('shopify','woocommerce','unknown')),
+	scraped_json jsonb null,
+	result_json jsonb null,
+	lead_captured boolean not null default false,
+	ip_hash text null
+);
+
+create index if not exists idx_reports_created_at on public.reports (created_at desc);
+create index if not exists idx_reports_status on public.reports (status);
+create index if not exists idx_reports_ip_hash on public.reports (ip_hash);
+
+create table if not exists public.leads (
+	id uuid primary key default gen_random_uuid(),
+	created_at timestamptz not null default now(),
+	report_id uuid not null references public.reports(id) on delete cascade,
+	email text not null,
+	consent boolean not null default false
+);
+
+create index if not exists idx_leads_created_at on public.leads (created_at desc);
+create index if not exists idx_leads_email on public.leads (email);
+
+create table if not exists public.rate_limits (
+	id uuid primary key default gen_random_uuid(),
+	created_at timestamptz not null default now(),
+	key text not null,
+	count int not null default 0,
+	reset_at timestamptz not null
+);
+
+create unique index if not exists uq_rate_limits_key on public.rate_limits (key);
+```
+
+4) Run the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Optional: if you want Playwright to run locally, install its browsers once:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx playwright install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open http://localhost:3000
 
-## Learn More
+## Test Mode
 
-To learn more about Next.js, take a look at the following resources:
+If `OPENAI_API_KEY` is missing, the app returns a mocked report to keep the MVP usable.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Playwright is used when available. If it fails, the scraper falls back to fetch + cheerio.
+- For production, move the audit processor to a background job queue.
