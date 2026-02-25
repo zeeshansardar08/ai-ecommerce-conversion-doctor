@@ -83,6 +83,35 @@ create table if not exists public.rate_limits (
 );
 
 create unique index if not exists uq_rate_limits_key on public.rate_limits (key);
+
+create table if not exists public.feature_requests (
+	id uuid primary key default gen_random_uuid(),
+	created_at timestamptz not null default now(),
+	type text not null check (type in ('unlock_full_audit','pdf_interest')),
+	email text not null,
+	report_id uuid null references public.reports(id) on delete set null,
+	store_url text null
+);
+
+create index if not exists idx_feature_requests_created_at on public.feature_requests (created_at desc);
+create index if not exists idx_feature_requests_email on public.feature_requests (email);
+create index if not exists idx_feature_requests_type on public.feature_requests (type);
+
+create table if not exists public.optimization_requests (
+	id uuid primary key default gen_random_uuid(),
+	created_at timestamptz not null default now(),
+	name text not null,
+	email text not null,
+	store_url text null,
+	monthly_traffic text not null check (monthly_traffic in ('<10k','10k-50k','50k-100k','100k+','unknown')),
+	revenue_range text null,
+	challenge text null,
+	report_id uuid null references public.reports(id) on delete set null
+);
+
+create index if not exists idx_optimization_requests_created_at on public.optimization_requests (created_at desc);
+create index if not exists idx_optimization_requests_email on public.optimization_requests (email);
+create index if not exists idx_optimization_requests_report_id on public.optimization_requests (report_id);
 ```
 
 4) Run the dev server
