@@ -22,6 +22,7 @@ export type Database = {
           result_json: Json | null;
           lead_captured: boolean;
           ip_hash: string | null;
+          used_mock: boolean;
         };
         Insert: {
           id?: string;
@@ -35,6 +36,7 @@ export type Database = {
           result_json?: Json | null;
           lead_captured?: boolean;
           ip_hash?: string | null;
+          used_mock?: boolean;
         };
         Update: {
           id?: string;
@@ -48,6 +50,7 @@ export type Database = {
           result_json?: Json | null;
           lead_captured?: boolean;
           ip_hash?: string | null;
+          used_mock?: boolean;
         };
         Relationships: [];
       };

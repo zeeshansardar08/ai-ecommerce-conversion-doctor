@@ -24,7 +24,8 @@ const getClientIp = (request: Request) => {
 const processAudit = async (
   reportId: string,
   url: string,
-  pageType: PageType
+  pageType: PageType,
+  useLiveAudit: boolean
 ) => {
   const supabase = getSupabaseAdmin();
   await supabase
@@ -39,11 +40,13 @@ const processAudit = async (
       .update({ scraped_json: scraped })
       .eq("id", reportId);
 
-    const report = await generateReport(scraped, pageType);
+    const { report, usedMock } = await generateReport(scraped, pageType, {
+      useLiveAudit,
+    });
 
     await supabase
       .from("reports")
-      .update({ status: "done", result_json: report })
+      .update({ status: "done", result_json: report, used_mock: usedMock })
       .eq("id", reportId);
   } catch (error) {
     await supabase
@@ -68,6 +71,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       url?: string;
       pageType?: PageType;
+      useLiveAudit?: boolean;
     };
 
     if (!body?.url || !body.pageType) {
@@ -148,7 +152,12 @@ export async function POST(request: Request) {
       );
     }
 
-    void processAudit(data.id, validation.normalized, body.pageType);
+    void processAudit(
+      data.id,
+      validation.normalized,
+      body.pageType,
+      Boolean(body.useLiveAudit)
+    );
 
     return NextResponse.json({ reportId: data.id });
   } catch (error) {
