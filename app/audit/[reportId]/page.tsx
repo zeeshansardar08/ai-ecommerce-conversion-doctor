@@ -58,6 +58,50 @@ const severityColors: Record<string, string> = {
   Low: "bg-emerald-100 text-emerald-700",
 };
 
+const severityBorders: Record<string, string> = {
+  High: "border-l-red-500",
+  Medium: "border-l-amber-500",
+  Low: "border-l-emerald-500",
+};
+
+const categoryIcons: Record<string, React.ReactElement> = {
+  cro: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12 5v14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  trust: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 4l6 3v5c0 4.5-3 7.5-6 8-3-.5-6-3.5-6-8V7l6-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9.5 12l1.5 1.5 3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  copy: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 7h12M6 12h8M6 17h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  mobile_ux: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="7" y="3" width="10" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M11 17h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  performance_basics: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 13a7 7 0 1 1 14 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12 12l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  seo_basics: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+};
+
 export default function AuditPage() {
   const params = useParams();
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
@@ -75,6 +119,24 @@ export default function AuditPage() {
   const [consent, setConsent] = useState(false);
   const [leadError, setLeadError] = useState<string | null>(null);
   const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [scoreProgress, setScoreProgress] = useState(0);
+  const [modalType, setModalType] = useState<
+    "unlock" | "pdf" | "optimize" | null
+  >(null);
+  const [modalStatus, setModalStatus] = useState<
+    "idle" | "submitting" | "success"
+  >("idle");
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [featureEmail, setFeatureEmail] = useState("");
+  const [featureStoreUrl, setFeatureStoreUrl] = useState("");
+  const [optName, setOptName] = useState("");
+  const [optEmail, setOptEmail] = useState("");
+  const [optStoreUrl, setOptStoreUrl] = useState("");
+  const [optTraffic, setOptTraffic] = useState<
+    "<10k" | "10k-50k" | "50k-100k" | "100k+"
+  >("<10k");
+  const [optRevenue, setOptRevenue] = useState("");
+  const [optChallenge, setOptChallenge] = useState("");
 
   const fetchStatus = useCallback(async () => {
     if (!reportId) {
@@ -190,12 +252,167 @@ export default function AuditPage() {
     failed: "Failed",
   }[status];
 
+  const scoreValue = report?.overall_score ?? 0;
+  const scoreLabel = useMemo(() => {
+    if (scoreValue >= 80) return "Excellent";
+    if (scoreValue >= 65) return "Good";
+    if (scoreValue >= 50) return "Needs Improvement";
+    return "Critical";
+  }, [scoreValue]);
+
+  const steps: AuditStatus[] = ["queued", "running", "done"];
+  const activeIndex = status === "failed" ? 1 : Math.max(0, steps.indexOf(status));
+  const radius = 78;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset =
+    circumference - (scoreProgress / 100) * circumference;
+
+  useEffect(() => {
+    if (!report) {
+      setScoreProgress(0);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setScoreProgress(scoreValue);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [report, scoreValue]);
+
+  useEffect(() => {
+    if (modalType) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+    return;
+  }, [modalType]);
+
+  useEffect(() => {
+    if (url) {
+      setFeatureStoreUrl(url);
+      setOptStoreUrl(url);
+    }
+  }, [url]);
+
+  const closeModal = () => {
+    setModalType(null);
+    setModalStatus("idle");
+    setModalError(null);
+  };
+
+  const openFeatureModal = (type: "unlock" | "pdf") => {
+    setModalType(type);
+    setModalStatus("idle");
+    setModalError(null);
+  };
+
+  const openOptimizeModal = () => {
+    setModalType("optimize");
+    setModalStatus("idle");
+    setModalError(null);
+  };
+
+  const submitFeatureRequest = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setModalError(null);
+
+    if (!featureEmail) {
+      setModalError("Email is required.");
+      return;
+    }
+
+    setModalStatus("submitting");
+    try {
+      const response = await fetch("/api/feature-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: modalType === "pdf" ? "pdf_interest" : "unlock_full_audit",
+          email: featureEmail,
+          reportId: reportId || null,
+          storeUrl: featureStoreUrl || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || "Unable to save request.");
+      }
+
+      setModalStatus("success");
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : "Unable to save request.");
+      setModalStatus("idle");
+    }
+  };
+
+  const submitOptimizationRequest = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setModalError(null);
+
+    if (!optName || !optEmail) {
+      setModalError("Name and email are required.");
+      return;
+    }
+
+    setModalStatus("submitting");
+    try {
+      const response = await fetch("/api/optimization-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: optName,
+          email: optEmail,
+          storeUrl: optStoreUrl || null,
+          monthlyTraffic: optTraffic,
+          revenueRange: optRevenue || null,
+          challenge: optChallenge || null,
+          reportId: reportId || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || "Unable to save request.");
+      }
+
+      setModalStatus("success");
+    } catch (err) {
+      setModalError(
+        err instanceof Error ? err.message : "Unable to save request."
+      );
+      setModalStatus("idle");
+    }
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 grid-glow" />
       <div className="pointer-events-none absolute inset-0 grain" />
 
-      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pb-20 pt-10">
+      <header className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-between px-6 pt-8">
+        <a href="/" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-white">
+            A
+          </div>
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-accent">
+              AI CRO
+            </p>
+            <p className="text-lg font-semibold">Conversion Doctor</p>
+          </div>
+        </a>
+        <a
+          href="/"
+          className="rounded-full border border-border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-foreground/60 transition hover:border-accent"
+        >
+          Live Audit
+        </a>
+      </header>
+
+      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pb-20 pt-6">
         <section className="animate-rise rounded-[28px] border border-border bg-surface p-6 shadow-[0_20px_60px_-45px_rgba(15,17,21,0.5)]">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -207,34 +424,75 @@ export default function AuditPage() {
                 {url ? url : "Preparing report"}
               </p>
             </div>
-            <div className="rounded-full border border-border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em]">
-              {pageType ? `${pageType} page` : "Analyzing"}
-            </div>
-          </div>
-          <div className="mt-6 grid gap-3 md:grid-cols-4">
-            {["queued", "running", "done"].map((step, index) => (
-              <div
-                key={step}
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold uppercase tracking-[0.25em] ${
-                  status === "failed"
-                    ? "border-red-200 bg-red-50 text-red-600"
-                    : status === step || (index < 2 && status === "done")
-                    ? "border-accent bg-accent/10 text-accent"
-                    : "border-border text-foreground/60"
-                }`}
-              >
-                {step}
-              </div>
-            ))}
-            <div
-              className={`rounded-2xl border px-4 py-3 text-sm font-semibold uppercase tracking-[0.25em] ${
-                status === "failed"
-                  ? "border-red-200 bg-red-50 text-red-600"
-                  : "border-border text-foreground/60"
-              }`}
+            <a
+              href="/"
+              className="rounded-full border border-border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition hover:border-accent"
             >
-              {status === "failed" ? "failed" : "report"}
-            </div>
+              {pageType ? `${pageType} page` : "Analyzing"}
+            </a>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            {steps.map((step, index) => {
+              const isCompleted = status === "done" ? true : index < activeIndex;
+              const isActive =
+                status !== "failed" && status !== "done" && index === activeIndex;
+              return (
+                <div key={step} className="flex items-center gap-3">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border text-xs font-semibold uppercase tracking-[0.25em] ${
+                      isCompleted
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : isActive
+                        ? "border-accent bg-accent/10 text-accent"
+                        : "border-border text-foreground/50"
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M5 13l4 4 10-10"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : (
+                      index + 1
+                    )}
+                  </div>
+                  <p
+                    className={`text-xs font-semibold uppercase tracking-[0.3em] ${
+                      isCompleted
+                        ? "text-emerald-500"
+                        : isActive
+                        ? "text-accent"
+                        : "text-foreground/50"
+                    }`}
+                  >
+                    {step}
+                  </p>
+                  {index < steps.length - 1 ? (
+                    <span
+                      className={`h-px w-10 ${
+                        isCompleted ? "bg-emerald-500" : "bg-border"
+                      }`}
+                    />
+                  ) : null}
+                </div>
+              );
+            })}
+            {status === "failed" ? (
+              <div className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-red-600">
+                Failed
+              </div>
+            ) : null}
           </div>
           {status === "failed" ? (
             <p className="mt-4 text-sm text-red-600">
@@ -253,7 +511,7 @@ export default function AuditPage() {
         ) : null}
 
         {status === "done" && report ? (
-          <section className="space-y-8">
+          <section className="animate-fade space-y-10">
             <div
               className={`relative rounded-[28px] border border-border bg-surface p-8 ${
                 leadCaptured ? "" : "opacity-60"
@@ -272,26 +530,71 @@ export default function AuditPage() {
                 </div>
               ) : null}
 
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div>
+              <div className="grid gap-8 lg:grid-cols-[1.3fr_1.7fr]">
+                <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-border bg-surface-muted p-7 text-center">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-foreground/60">
                     Overall Score
                   </p>
-                  <p className="text-4xl font-semibold text-accent">
-                    {report.overall_score}
+                  <div className="relative flex h-52 w-52 items-center justify-center">
+                    <div className="absolute inset-0 rounded-full bg-accent/10 blur-2xl" />
+                    <svg className="h-full w-full -rotate-90 soft-halo rounded-full" viewBox="0 0 180 180">
+                      <circle
+                        cx="90"
+                        cy="90"
+                        r={radius}
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        fill="transparent"
+                        className="text-border"
+                      />
+                      <circle
+                        cx="90"
+                        cy="90"
+                        r={radius}
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        fill="transparent"
+                        strokeDasharray={`${circumference} ${circumference}`}
+                        strokeDashoffset={dashOffset}
+                        strokeLinecap="round"
+                        className="text-accent transition-[stroke-dashoffset] duration-700 ease-out"
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center">
+                      <span className="text-5xl font-semibold text-foreground">
+                        {scoreValue}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-accent">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 3l9 16H3l9-16z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                      <path d="M12 9v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      <circle cx="12" cy="17" r="1" fill="currentColor" />
+                    </svg>
+                    {scoreLabel}
+                  </span>
+                  <p className="text-sm text-foreground/70">
+                    Shipping clarity and trust signals are your biggest quick wins.
                   </p>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   {Object.entries(report.category_scores).map(
                     ([key, value]) => (
                       <div
                         key={key}
-                        className="rounded-2xl border border-border bg-surface-muted px-4 py-3"
+                        className="rounded-2xl border border-border bg-surface-muted px-4 py-4 text-center transition hover:-translate-y-1 hover:shadow-[0_18px_45px_-35px_rgba(15,17,21,0.6)]"
                       >
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-foreground/60">
-                          {key.replace("_", " ")}
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-foreground/60">
+                          <span className="text-foreground/70">
+                            {categoryIcons[key]}
+                          </span>
+                          <span>{key.replace("_", " ")}</span>
+                        </div>
+                        <p className="mt-2 text-3xl font-semibold text-foreground">
+                          {value}
                         </p>
-                        <p className="text-lg font-semibold">{value}</p>
                       </div>
                     )
                   )}
@@ -306,17 +609,34 @@ export default function AuditPage() {
             >
               <div className="rounded-[28px] border border-border bg-surface p-6">
                 <h2 className="text-lg font-semibold">Top 3 Fixes</h2>
-                <div className="mt-4 space-y-4">
-                  {report.top_fixes.map((fix) => (
-                    <div key={fix.title} className="rounded-2xl bg-surface-muted p-4">
-                      <p className="text-sm font-semibold">{fix.title}</p>
-                      <p className="mt-2 text-xs text-foreground/60">
+                <div className="mt-5 space-y-6">
+                  {report.top_fixes.map((fix, index) => (
+                    <div
+                      key={fix.title}
+                      className={`rounded-2xl border border-border bg-gradient-to-br from-surface-muted via-surface to-surface-muted p-5 shadow-[0_16px_45px_-35px_rgba(15,17,21,0.65)] transition hover:-translate-y-1 ${
+                        index === 0 ? "scale-[1.01]" : ""
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">
+                          #{index + 1}
+                        </div>
+                        <p className="text-base font-semibold text-foreground">
+                          {fix.title}
+                        </p>
+                        {index === 0 ? (
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                            High Impact
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-3 text-xs text-foreground/60">
                         {fix.why_it_matters}
                       </p>
-                      <p className="mt-2 text-xs text-foreground/70">
+                      <p className="mt-3 text-sm text-foreground/85">
                         {fix.how_to_fix}
                       </p>
-                      <span className="mt-3 inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+                      <span className="mt-4 inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
                         Effort {fix.estimated_effort}
                       </span>
                     </div>
@@ -348,25 +668,29 @@ export default function AuditPage() {
                   {filteredFindings.map((finding) => (
                     <div
                       key={finding.id}
-                      className="rounded-2xl border border-border bg-surface-muted p-4"
+                      className={`rounded-2xl border border-border bg-surface-muted p-4 transition hover:-translate-y-1 hover:shadow-[0_18px_45px_-35px_rgba(15,17,21,0.6)] border-l-[3px] ${
+                        severityBorders[finding.severity]
+                      }`}
                     >
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold">{finding.title}</p>
+                        <p className="text-base font-semibold text-foreground">
+                          {finding.title}
+                        </p>
                         <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
                             severityColors[finding.severity]
                           }`}
                         >
                           {finding.severity}
                         </span>
-                        <span className="rounded-full bg-foreground/10 px-2 py-1 text-xs font-semibold text-foreground/70">
+                        <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs font-semibold text-foreground/60">
                           Impact {finding.impact}
                         </span>
                       </div>
                       <p className="mt-2 text-xs text-foreground/60">
                         {finding.evidence}
                       </p>
-                      <p className="mt-2 text-xs text-foreground/70">
+                      <p className="mt-2 text-sm text-foreground/80">
                         {finding.recommendation}
                       </p>
                       <span className="mt-3 inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
@@ -377,9 +701,237 @@ export default function AuditPage() {
                 </div>
               </div>
             </div>
+
+            <section className="rounded-[28px] border border-border bg-surface p-8">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-foreground/60">
+                    Next Steps
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold">
+                    Don't let these leaks cost you more sales.
+                  </h2>
+                  <p className="mt-2 text-sm text-foreground/70">
+                    Unlock the full audit, export a PDF, or get expert CRO support.
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-foreground/80">
+                    Most stores recover 5-15% revenue after fixing top 3 issues.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => openFeatureModal("unlock")}
+                    className="rounded-2xl bg-gradient-to-r from-accent to-accent-2 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_35px_-25px_rgba(240,91,42,0.7)] transition hover:-translate-y-1 hover:shadow-[0_16px_40px_-25px_rgba(240,91,42,0.8)]"
+                  >
+                    Unlock Full Audit
+                  </button>
+                  <button
+                    onClick={() => openFeatureModal("pdf")}
+                    className="rounded-2xl border border-border px-5 py-3 text-sm font-semibold text-foreground/70 transition hover:-translate-y-1 hover:border-accent"
+                  >
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={openOptimizeModal}
+                    className="rounded-2xl border border-border px-5 py-3 text-sm font-semibold text-foreground/70 transition hover:-translate-y-1 hover:border-accent"
+                  >
+                    Request Optimization Help
+                  </button>
+                </div>
+              </div>
+            </section>
           </section>
         ) : null}
       </main>
+
+      {modalType ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur"
+          onClick={closeModal}
+        >
+          <div
+            className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_30px_80px_-45px_rgba(15,17,21,0.8)] animate-pop"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-border px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-accent">
+                  {modalType === "optimize" ? "Consultation" : "Early Access"}
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold">
+                  {modalStatus === "success"
+                    ? modalType === "optimize"
+                      ? "Request received"
+                      : "You're on the early access list."
+                    : modalType === "optimize"
+                    ? "Want help implementing these fixes?"
+                    : "Unlock the Full Conversion Report"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-full border border-border bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-foreground/60 transition hover:border-accent"
+                aria-label="Close modal"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {modalStatus === "success" ? (
+                <div className="space-y-4 text-center">
+                  <p className="text-sm text-foreground/70">
+                    {modalType === "optimize"
+                      ? "Thanks! We'll review your report and reach out within 24 hours."
+                      : "We'll notify you when full access launches."}
+                  </p>
+                </div>
+              ) : modalType === "optimize" ? (
+                <form onSubmit={submitOptimizationRequest} className="space-y-4">
+                  <div className="grid gap-4">
+                    <label className="text-sm font-semibold">
+                      Name
+                      <input
+                        value={optName}
+                        onChange={(event) => setOptName(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                        required
+                      />
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Email
+                      <input
+                        type="email"
+                        value={optEmail}
+                        onChange={(event) => setOptEmail(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                        required
+                      />
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Store URL (optional)
+                      <input
+                        value={optStoreUrl}
+                        onChange={(event) => setOptStoreUrl(event.target.value)}
+                        placeholder="https://yourstore.com"
+                        className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                      />
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Monthly traffic
+                      <select
+                        value={optTraffic}
+                        onChange={(event) =>
+                          setOptTraffic(
+                            event.target.value as
+                              | "<10k"
+                              | "10k-50k"
+                              | "50k-100k"
+                              | "100k+"
+                          )
+                        }
+                        className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                      >
+                        <option value="<10k">&lt;10k</option>
+                        <option value="10k-50k">10k-50k</option>
+                        <option value="50k-100k">50k-100k</option>
+                        <option value="100k+">100k+</option>
+                      </select>
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Revenue range (optional)
+                      <input
+                        value={optRevenue}
+                        onChange={(event) => setOptRevenue(event.target.value)}
+                        placeholder="$10k - $50k"
+                        className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                      />
+                    </label>
+                    <label className="text-sm font-semibold">
+                      Biggest challenge
+                      <textarea
+                        value={optChallenge}
+                        onChange={(event) => setOptChallenge(event.target.value)}
+                        rows={3}
+                        className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                      />
+                    </label>
+                  </div>
+                  {modalError ? (
+                    <p className="text-sm text-red-600">{modalError}</p>
+                  ) : null}
+                </form>
+              ) : (
+                <form onSubmit={submitFeatureRequest} className="space-y-4">
+                  <div className="rounded-2xl border border-border bg-surface-muted p-4 text-sm text-foreground/70">
+                    <p>• Detailed copy rewrites</p>
+                    <p>• Multi-page audit</p>
+                    <p>• Priority roadmap (Week 1 / Week 2 / Later)</p>
+                    <p>• PDF export</p>
+                    <p>• Ongoing optimization insights</p>
+                  </div>
+                  {modalType === "pdf" ? (
+                    <p className="text-sm text-foreground/70">
+                      PDF export will be available in Pro version. Join early access to get notified.
+                    </p>
+                  ) : null}
+                  <label className="text-sm font-semibold">
+                    Email
+                    <input
+                      type="email"
+                      value={featureEmail}
+                      onChange={(event) => setFeatureEmail(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                      required
+                    />
+                  </label>
+                  <label className="text-sm font-semibold">
+                    Store URL (optional)
+                    <input
+                      value={featureStoreUrl}
+                      onChange={(event) => setFeatureStoreUrl(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-border bg-surface-muted px-4 py-3 text-base outline-none transition focus:border-accent"
+                    />
+                  </label>
+                  {modalError ? (
+                    <p className="text-sm text-red-600">{modalError}</p>
+                  ) : null}
+                </form>
+              )}
+            </div>
+
+            <div className="border-t border-border px-6 py-4">
+              {modalStatus === "success" ? (
+                <button
+                  onClick={closeModal}
+                  className="w-full rounded-2xl bg-accent px-6 py-3 text-sm font-semibold text-white"
+                >
+                  Close
+                </button>
+              ) : modalType === "optimize" ? (
+                <button
+                  onClick={submitOptimizationRequest}
+                  disabled={modalStatus === "submitting"}
+                  className="w-full rounded-2xl bg-accent px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {modalStatus === "submitting"
+                    ? "Submitting..."
+                    : "Request Optimization Help"}
+                </button>
+              ) : (
+                <button
+                  onClick={submitFeatureRequest}
+                  disabled={modalStatus === "submitting"}
+                  className="w-full rounded-2xl bg-accent px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {modalStatus === "submitting" ? "Submitting..." : "Get Early Access"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showLeadModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6 backdrop-blur">
