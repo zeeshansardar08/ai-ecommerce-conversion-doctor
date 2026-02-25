@@ -211,10 +211,12 @@ const createMockReport = (scraped: ScrapedPage): AuditReport => {
 
 export const generateReport = async (
   scraped: ScrapedPage,
-  pageType: PageType
-): Promise<AuditReport> => {
-  if (process.env.USE_MOCK_AI === "true" || !process.env.OPENAI_API_KEY) {
-    return createMockReport(scraped);
+  pageType: PageType,
+  options?: { useLiveAudit?: boolean }
+): Promise<{ report: AuditReport; usedMock: boolean }> => {
+  const useLiveAudit = options?.useLiveAudit ?? false;
+  if (!useLiveAudit || process.env.USE_MOCK_AI === "true" || !process.env.OPENAI_API_KEY) {
+    return { report: createMockReport(scraped), usedMock: true };
   }
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -226,7 +228,7 @@ export const generateReport = async (
         {
           role: "system",
           content:
-            "You are a senior CRO strategist. Produce a strict JSON report with actionable fixes. Output only JSON.",
+            "You are a senior CRO strategist. Produce a strict JSON report with actionable fixes. Use evidence snippets from the scraped content. Recommendations must clearly state WHERE to fix and WHAT to change. Output only JSON.",
         },
         {
           role: "user",
@@ -234,7 +236,7 @@ export const generateReport = async (
             pageType,
             scraped,
             instructions:
-              "Return 8-12 findings. Mention platform-specific hints if detectedPlatform is shopify or woocommerce.",
+              "Return 8-12 findings. Each evidence should quote or paraphrase a short snippet from mainTextSample. Recommendations must include where to apply the fix (e.g., hero, CTA, product gallery) and what to change. Mention platform-specific hints if detectedPlatform is shopify or woocommerce.",
           }),
         },
       ],
@@ -253,7 +255,7 @@ export const generateReport = async (
       throw new Error("OpenAI response was empty.");
     }
 
-    return JSON.parse(outputText) as AuditReport;
+    return { report: JSON.parse(outputText) as AuditReport, usedMock: false };
   } catch (error) {
     const status =
       error && typeof error === "object" && "status" in error
@@ -268,7 +270,7 @@ export const generateReport = async (
       message.includes("rate limit") ||
       message.includes("insufficient")
     ) {
-      return createMockReport(scraped);
+      return { report: createMockReport(scraped), usedMock: true };
     }
 
     throw error;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AuditStatus = "queued" | "running" | "done" | "failed";
@@ -12,6 +12,7 @@ type ReportResponse = {
   leadCaptured?: boolean;
   url?: string;
   pageType?: string;
+  previewMode?: boolean;
 };
 
 type AuditReport = {
@@ -104,6 +105,7 @@ const categoryIcons: Record<string, React.ReactElement> = {
 
 export default function AuditPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
   const [status, setStatus] = useState<AuditStatus>("queued");
   const [report, setReport] = useState<AuditReport | null>(null);
@@ -111,6 +113,7 @@ export default function AuditPage() {
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [pageType, setPageType] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<
     (typeof categoryFilters)[number]
   >("All");
@@ -156,6 +159,7 @@ export default function AuditPage() {
       setLeadCaptured(Boolean(payload.leadCaptured));
       setUrl(payload.url || null);
       setPageType(payload.pageType || null);
+      setPreviewMode(Boolean(payload.previewMode));
       if (payload.status === "done" && !payload.leadCaptured) {
         setShowLeadModal(true);
       }
@@ -253,6 +257,7 @@ export default function AuditPage() {
   }[status];
 
   const scoreValue = report?.overall_score ?? 0;
+    const liveRequested = searchParams.get("live") === "1";
   const scoreLabel = useMemo(() => {
     if (scoreValue >= 80) return "Excellent";
     if (scoreValue >= 65) return "Good";
@@ -512,6 +517,11 @@ export default function AuditPage() {
 
         {status === "done" && report ? (
           <section className="animate-fade space-y-10">
+            {previewMode && liveRequested ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+                Live audit temporarily unavailable — showing preview report.
+              </div>
+            ) : null}
             <div
               className={`relative rounded-[28px] border border-border bg-surface p-8 ${
                 leadCaptured ? "" : "opacity-60"

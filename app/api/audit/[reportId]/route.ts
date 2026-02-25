@@ -23,7 +23,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("reports")
     .select(
-      "id,status,error,result_json,lead_captured,url,page_type,created_at"
+      "id,status,error,result_json,lead_captured,url,page_type,created_at,used_mock"
     )
     .eq("id", reportId)
     .maybeSingle<ReportRow>();
@@ -61,5 +61,6 @@ export async function GET(
     leadCaptured: data.lead_captured,
     url: data.url,
     pageType: data.page_type,
+    previewMode: data.used_mock,
   });
 }

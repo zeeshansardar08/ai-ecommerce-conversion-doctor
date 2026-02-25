@@ -36,6 +36,7 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 IP_HASH_SALT=any_random_string
 USE_MOCK_AI=false
+ADMIN_PASSWORD=your_admin_password
 ```
 
 Restart the dev server after changing environment variables.
@@ -56,12 +57,17 @@ create table if not exists public.reports (
 	scraped_json jsonb null,
 	result_json jsonb null,
 	lead_captured boolean not null default false,
-	ip_hash text null
+	ip_hash text null,
+	used_mock boolean not null default false
 );
 
 create index if not exists idx_reports_created_at on public.reports (created_at desc);
 create index if not exists idx_reports_status on public.reports (status);
 create index if not exists idx_reports_ip_hash on public.reports (ip_hash);
+
+-- If reports table already exists, add used_mock column
+alter table public.reports
+	add column if not exists used_mock boolean not null default false;
 
 create table if not exists public.leads (
 	id uuid primary key default gen_random_uuid(),
@@ -132,7 +138,16 @@ Open http://localhost:3000
 
 If `OPENAI_API_KEY` is missing, the app returns a mocked report to keep the MVP usable.
 
+Live Audit (Beta) is controlled from the UI toggle. When off, the app uses the mock report.
+
 ## Notes
 
 - Playwright is used when available. If it fails, the scraper falls back to fetch + cheerio.
 - For production, move the audit processor to a background job queue.
+
+## Future Enhancements (Post-MVP)
+
+- Add email notifications using Resend when going live.
+- Add Stripe billing for full audit unlock.
+- Add PDF generation.
+- Add user authentication system.

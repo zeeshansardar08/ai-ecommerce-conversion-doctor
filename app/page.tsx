@@ -18,6 +18,7 @@ export default function Home() {
   const [pageType, setPageType] = useState<PageType>("product");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useLiveAudit, setUseLiveAudit] = useState(false);
   const [selectOpen, setSelectOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const selectRef = useRef<HTMLDivElement | null>(null);
@@ -57,7 +58,7 @@ export default function Home() {
       const response = await fetch("/api/audit/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: normalizedUrl, pageType }),
+        body: JSON.stringify({ url: normalizedUrl, pageType, useLiveAudit }),
       });
 
       if (!response.ok) {
@@ -66,7 +67,7 @@ export default function Home() {
       }
 
       const payload = (await response.json()) as { reportId: string };
-      router.push(`/audit/${payload.reportId}`);
+      router.push(`/audit/${payload.reportId}?live=${useLiveAudit ? "1" : "0"}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start audit.");
     } finally {
@@ -262,6 +263,30 @@ export default function Home() {
               {error ? (
                 <p className="text-sm text-red-600">{error}</p>
               ) : null}
+              <label className="flex items-center justify-between rounded-2xl border border-border bg-surface-muted px-4 py-3 text-sm font-semibold">
+                <span>
+                  Live Audit (Beta)
+                  <span className="ml-2 text-xs font-semibold uppercase tracking-[0.3em] text-foreground/50">
+                    Off by default
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setUseLiveAudit((prev) => !prev)}
+                  className={`flex h-7 w-12 items-center rounded-full border transition ${
+                    useLiveAudit
+                      ? "border-emerald-500 bg-emerald-500/20"
+                      : "border-border bg-background"
+                  }`}
+                  aria-pressed={useLiveAudit}
+                >
+                  <span
+                    className={`h-5 w-5 rounded-full bg-white shadow transition ${
+                      useLiveAudit ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </label>
               <button
                 type="submit"
                 disabled={isSubmitting}
