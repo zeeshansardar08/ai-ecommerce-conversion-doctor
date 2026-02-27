@@ -224,8 +224,42 @@ export default function Home() {
   };
 
   /* ────────────────────── render ────────────────────── */
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "CROSignal",
+    url: "https://crosignal.com",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "AI-powered conversion rate optimization audits for Shopify and WooCommerce stores. Get a scored report with prioritized fixes in 60 seconds.",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      description: "Free AI CRO audit for ecommerce stores",
+    },
+    creator: {
+      "@type": "Organization",
+      name: "CROSignal",
+      url: "https://crosignal.com",
+    },
+    featureList: [
+      "AI conversion audit",
+      "Top 3 prioritized fixes",
+      "CRO, Trust, Copy, Mobile UX, Performance, SEO scoring",
+      "Shopify and WooCommerce support",
+      "Mobile-first analysis",
+      "Implementation-ready recommendations",
+    ],
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* background effects */}
       <div className="pointer-events-none absolute inset-0 grid-glow" />
       <div className="pointer-events-none absolute inset-0 grain" />

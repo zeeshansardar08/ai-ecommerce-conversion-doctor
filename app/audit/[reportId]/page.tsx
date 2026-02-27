@@ -427,10 +427,10 @@ export default function AuditPage() {
         <section className="animate-rise rounded-[28px] border border-border bg-surface p-6 shadow-[0_20px_60px_-45px_rgba(15,17,21,0.5)]">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-foreground/60">
-                Audit Status
+              <h1 className="text-2xl font-semibold">CRO Audit Report</h1>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.35em] text-foreground/60">
+                Status: {statusLabel}
               </p>
-              <h1 className="text-2xl font-semibold">{statusLabel}</h1>
               <p className="text-sm text-foreground/60">
                 {url ? url : "Preparing report"}
               </p>
