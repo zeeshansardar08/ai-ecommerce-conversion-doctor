@@ -38,8 +38,40 @@ export default function PricingPage() {
     }
   };
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "CROSignal",
+    url: "https://crosignal.com",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Free MVP",
+        price: "0",
+        priceCurrency: "USD",
+        description:
+          "Single-page AI CRO audit with top fixes and 8–12 findings",
+      },
+      {
+        "@type": "Offer",
+        name: "Pro / Agency",
+        price: "0",
+        priceCurrency: "USD",
+        description:
+          "Multi-page audits, team dashboards, and competitive benchmarks — coming soon",
+        availability: "https://schema.org/PreOrder",
+      },
+    ],
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="pointer-events-none absolute inset-0 grid-glow" />
       <div className="pointer-events-none absolute inset-0 grain" />
 
@@ -83,10 +115,10 @@ export default function PricingPage() {
         <section className="grid gap-6 md:grid-cols-2">
           {/* Free plan */}
           <div className="rounded-[28px] border border-border bg-surface p-8 shadow-[0_20px_60px_-45px_rgba(15,17,21,0.5)]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-foreground/50">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.25em] text-foreground/50">
               Free MVP
-            </p>
-            <h2 className="mt-3 text-3xl font-bold">$0</h2>
+            </h2>
+            <p className="mt-3 text-3xl font-bold">$0</p>
             <ul className="mt-6 space-y-3 text-sm text-foreground/65">
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 text-accent">✓</span>
@@ -111,10 +143,10 @@ export default function PricingPage() {
 
           {/* Pro plan */}
           <div className="rounded-[28px] border border-border bg-surface-muted p-8">
-            <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-foreground/50">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.25em] text-foreground/50">
               Pro / Agency
-            </p>
-            <h2 className="mt-3 text-3xl font-bold">Coming soon</h2>
+            </h2>
+            <p className="mt-3 text-3xl font-bold">Coming soon</p>
             <ul className="mt-6 space-y-3 text-sm text-foreground/65">
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 text-foreground/30">○</span>
