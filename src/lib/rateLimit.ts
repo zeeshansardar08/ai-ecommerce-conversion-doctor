@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { getSupabaseAdmin } from "./supabase";
 import type { Database } from "./database.types";
 
-const MAX_PER_DAY = 20;
+const MAX_PER_DAY = 50;
 const WINDOW_HOURS = 24;
 
 export const hashIp = (ip: string) => {

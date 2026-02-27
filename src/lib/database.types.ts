@@ -106,7 +106,7 @@ export type Database = {
         Row: {
           id: string;
           created_at: string;
-          type: "unlock_full_audit" | "pdf_interest";
+          type: "unlock_full_audit" | "pdf_interest" | "waitlist";
           email: string;
           report_id: string | null;
           store_url: string | null;
@@ -114,7 +114,7 @@ export type Database = {
         Insert: {
           id?: string;
           created_at?: string;
-          type: "unlock_full_audit" | "pdf_interest";
+          type: "unlock_full_audit" | "pdf_interest" | "waitlist";
           email: string;
           report_id?: string | null;
           store_url?: string | null;
@@ -122,7 +122,7 @@ export type Database = {
         Update: {
           id?: string;
           created_at?: string;
-          type?: "unlock_full_audit" | "pdf_interest";
+          type?: "unlock_full_audit" | "pdf_interest" | "waitlist";
           email?: string;
           report_id?: string | null;
           store_url?: string | null;

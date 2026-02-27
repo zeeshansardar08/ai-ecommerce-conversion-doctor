@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   try {
     const supabase = getSupabaseAdmin();
     const body = (await request.json()) as {
-      type?: "unlock_full_audit" | "pdf_interest";
+      type?: "unlock_full_audit" | "pdf_interest" | "waitlist";
       email?: string;
       reportId?: string;
       storeUrl?: string;
