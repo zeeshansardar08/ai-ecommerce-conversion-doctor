@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackEvent } from "@/src/lib/analytics";
 
@@ -108,11 +108,29 @@ const categoryIcons: Record<string, React.ReactElement> = {
   ),
 };
 
+function friendlyErrorMessage(error: string | null): string {
+  if (!error) return "Something went wrong while analyzing your page. This can happen with temporary network issues or server load.";
+  const lower = error.toLowerCase();
+  if (lower.includes("ssrf") || lower.includes("blocked") || lower.includes("not allowed"))
+    return "We couldn\u2019t reach that URL. Please check that the address is correct and publicly accessible.";
+  if (lower.includes("timeout") || lower.includes("timed out"))
+    return "The page took too long to respond. This sometimes happens with slow-loading sites \u2014 please try again.";
+  if (lower.includes("rate limit") || lower.includes("too many"))
+    return "You\u2019ve run several audits recently. Please wait a few minutes before trying again.";
+  if (lower.includes("not found") || lower.includes("404"))
+    return "We couldn\u2019t find that page. Please double-check the URL and try again.";
+  if (lower.includes("openai") || lower.includes("ai") || lower.includes("model"))
+    return "Our AI analysis service is temporarily unavailable. Please try again in a minute.";
+  return "Something went wrong while analyzing your page. This can happen with temporary network issues or server load.";
+}
+
 export default function AuditPage() {
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
   const [status, setStatus] = useState<AuditStatus>("queued");
+  const [retrying, setRetrying] = useState(false);
   const prevStatusRef = useRef<AuditStatus>("queued");
   const [report, setReport] = useState<AuditReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -146,6 +164,28 @@ export default function AuditPage() {
   >("<10k");
   const [optRevenue, setOptRevenue] = useState("");
   const [optChallenge, setOptChallenge] = useState("");
+
+  const handleRetry = async () => {
+    if (!url || retrying) return;
+    setRetrying(true);
+    try {
+      const res = await fetch("/api/audit/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, pageType: pageType || "landing", useLiveAudit: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to start a new audit.");
+      }
+      const data = (await res.json()) as { reportId: string };
+      trackEvent({ name: "audit_started", props: { url, pageType: pageType || "landing" } });
+      router.push(`/audit/${data.reportId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to retry. Please try again.");
+      setRetrying(false);
+    }
+  };
 
   const fetchStatus = useCallback(async () => {
     if (!reportId) {
@@ -520,14 +560,69 @@ export default function AuditPage() {
               </div>
             ) : null}
           </div>
-          {status === "failed" ? (
-            <p className="mt-4 text-sm text-red-600">
-              {error || "Audit failed. Please try again."}
-            </p>
-          ) : null}
         </section>
 
-        {status !== "done" ? (
+        {status === "failed" ? (
+          <section className="rounded-[28px] border border-red-200/40 bg-red-50/30 p-8">
+            <div className="mx-auto max-w-lg text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="#dc2626" strokeWidth="1.5" />
+                  <path d="M12 8v4" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="12" cy="16" r="1" fill="#dc2626" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-red-700">Audit Failed</h2>
+              <p className="mt-2 text-sm leading-relaxed text-red-600/80">
+                {friendlyErrorMessage(error)}
+              </p>
+              <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                {url ? (
+                  <button
+                    onClick={handleRetry}
+                    disabled={retrying}
+                    className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-60"
+                  >
+                    {retrying ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                          <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                        Retrying&hellip;
+                      </>
+                    ) : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M1 4v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Retry Audit
+                      </>
+                    )}
+                  </button>
+                ) : null}
+                <a
+                  href="/"
+                  className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-2.5 text-sm font-semibold text-foreground/70 transition hover:bg-foreground/5"
+                >
+                  Start New Audit
+                </a>
+              </div>
+              <p className="mt-5 text-xs text-foreground/40">
+                Still having trouble?{" "}
+                <a
+                  href="mailto:support@crosignal.com?subject=Audit%20Failed%20-%20Report%20{reportId}"
+                  className="underline hover:text-foreground/60"
+                >
+                  Contact support
+                </a>
+              </p>
+            </div>
+          </section>
+        ) : null}
+
+        {status !== "done" && status !== "failed" ? (
           <section className="rounded-[28px] border border-border bg-surface p-8 text-center">
             <p className="text-lg font-semibold">Generating your CRO report...</p>
             <p className="mt-2 text-sm text-foreground/60">
