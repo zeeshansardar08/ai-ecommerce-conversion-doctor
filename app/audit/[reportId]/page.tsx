@@ -164,6 +164,7 @@ export default function AuditPage() {
   >("<10k");
   const [optRevenue, setOptRevenue] = useState("");
   const [optChallenge, setOptChallenge] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const handleRetry = async () => {
     if (!url || retrying) return;
@@ -184,6 +185,25 @@ export default function AuditPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to retry. Please try again.");
       setRetrying(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const link = `${window.location.origin}/audit/${reportId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = link;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     }
   };
 
@@ -863,6 +883,51 @@ export default function AuditPage() {
                   >
                     Request Optimization Help
                   </button>
+                </div>
+              </div>
+            </section>
+
+            {/* ── Share Report ── */}
+            <section className="rounded-[28px] border border-border bg-surface p-8">
+              <div className="mx-auto max-w-xl text-center">
+                <h2 className="text-lg font-semibold">Share This Report</h2>
+                <p className="mt-1 text-sm text-foreground/60">
+                  Copy the link to save it or share with your team.
+                </p>
+
+                <div className="mt-5 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-border px-6 py-2.5 text-sm font-semibold text-foreground/70 transition hover:-translate-y-0.5 hover:border-accent hover:text-foreground"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.5" />
+                    </svg>
+                    {copied ? "\u2713 Copied!" : "Copy Report Link"}
+                  </button>
+                  {typeof navigator !== "undefined" && "share" in navigator ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.share({
+                          title: `CRO Audit Report${url ? ` — ${url}` : ""}`,
+                          text: `Check out this CRO audit report${url ? ` for ${url}` : ""}`,
+                          url: `${window.location.origin}/audit/${reportId}`,
+                        }).catch(() => { /* user cancelled */ });
+                      }}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-border px-6 py-2.5 text-sm font-semibold text-foreground/70 transition hover:-translate-y-0.5 hover:border-accent hover:text-foreground"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
+                        <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="1.5" />
+                        <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" stroke="currentColor" strokeWidth="1.5" />
+                      </svg>
+                      Share
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </section>
