@@ -47,14 +47,14 @@ export default function PricingPage() {
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-8">
         <a href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-white font-bold text-sm">
-            AI
+            CS
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-accent font-semibold">
-              AI CRO
+            <p className="text-base font-bold leading-tight">
+              CRO<span className="text-accent">Signal</span>
             </p>
-            <p className="text-base font-semibold leading-tight">
-              Conversion Doctor
+            <p className="text-[10px] uppercase tracking-[0.25em] text-foreground/45 font-medium">
+              AI Conversion Audits
             </p>
           </div>
         </a>
@@ -75,7 +75,7 @@ export default function PricingPage() {
             Simple, transparent plans
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-foreground/65 leading-relaxed">
-            The MVP is free while we refine the AI Conversion Doctor. Upgrade
+            The MVP is free while we refine CROSignal. Upgrade
             plans will unlock multi-page audits and team workflows.
           </p>
         </div>

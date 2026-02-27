@@ -234,14 +234,14 @@ export default function Home() {
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-8">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-white font-bold text-sm">
-            AI
+            CS
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-accent font-semibold">
-              AI CRO
+            <p className="text-base font-bold leading-tight">
+              CRO<span className="text-accent">Signal</span>
             </p>
-            <p className="text-base font-semibold leading-tight">
-              Conversion Doctor
+            <p className="text-[10px] uppercase tracking-[0.25em] text-foreground/45 font-medium">
+              AI Conversion Audits
             </p>
           </div>
         </div>
@@ -271,16 +271,17 @@ export default function Home() {
 
             {/* headline */}
             <h1 className="relative text-4xl font-bold leading-[1.12] tracking-tight text-foreground md:text-[3.5rem]">
-              Increase conversions
+              Your store is leaking
               <br className="hidden sm:block" />
-              <span className="text-accent"> without </span>
-              increasing ad&nbsp;spend.
+              <span className="text-accent"> conversions.</span>
+              <br className="hidden sm:block" />
+              CROSignal finds them.
             </h1>
 
             {/* subheadline */}
             <p className="max-w-lg text-lg leading-relaxed text-foreground/75">
-              AI-powered CRO audit for Shopify &amp; WooCommerce stores.
-              Paste your URL, get a prioritized fix list in ~60&nbsp;seconds.
+              AI-powered conversion audit for Shopify &amp; WooCommerce.
+              Paste a URL, get a prioritized fix list in ~60&nbsp;seconds.
             </p>
 
             {/* trust line */}
@@ -440,7 +441,7 @@ export default function Home() {
                 </span>
               </div>
               <h2 className="font-serif text-2xl font-semibold text-foreground">
-                Conversion Doctor Report
+                CROSignal Report
               </h2>
               <div className="space-y-3 text-sm leading-relaxed text-foreground/65">
                 <p>
@@ -588,7 +589,7 @@ export default function Home() {
       {/* ── footer ── */}
       <footer className="relative z-10 border-t border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8 text-xs text-foreground/40">
-          <span>© {new Date().getFullYear()} AI Conversion Doctor</span>
+          <span>© {new Date().getFullYear()} CROSignal</span>
           <div className="flex gap-4">
             <a
               href="/pricing"

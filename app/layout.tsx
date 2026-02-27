@@ -14,9 +14,9 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
-  title: "AI Ecommerce Conversion Doctor",
+  title: "CROSignal — AI Conversion Audits for Ecommerce",
   description:
-    "Find hidden conversion leaks in your store with an AI-powered CRO audit.",
+    "Find hidden conversion leaks in your Shopify or WooCommerce store with an AI-powered CRO audit. Free, instant, actionable.",
 };
 
 export default function RootLayout({

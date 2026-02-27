@@ -1,26 +1,31 @@
-# AI Ecommerce Conversion Doctor
+# CROSignal
 
-MVP Next.js app that audits a single ecommerce page URL and returns a structured CRO report using OpenAI.
+AI-powered conversion rate optimization audits for ecommerce stores. Paste a URL, get a scored report with prioritized fixes in ~60 seconds.
+
+**Domain:** [CROSignal.com](https://crosignal.com)
 
 ## Features
 
-- URL audit (Shopify/WooCommerce or any ecommerce page)
-- Overall score + category scores
-- Top 3 prioritized fixes
-- 8-12 detailed findings
-- Lead capture gate before unlocking results
-- Supabase storage for reports and leads
-- Simple IP and email rate limiting (3 audits per 24h)
+- URL audit (Shopify, WooCommerce, or any ecommerce page)
+- Overall score + category scores (CRO, Trust, Copy, Mobile UX, Performance, SEO)
+- Top 3 prioritized fixes with evidence and location
+- 8–12 detailed findings with confidence levels
+- Lead capture gate before unlocking full results
+- Waitlist capture for Pro/Agency plan
+- 24h report caching per normalized URL
+- Supabase storage for reports, leads, and feature requests
+- IP-based rate limiting (50 audits per 24h)
+- Admin dashboard for leads and requests
 
 ## Tech Stack
 
-- Next.js 14+ (App Router)
-- TypeScript + Tailwind
-- OpenAI API (structured JSON)
+- Next.js 16 (App Router)
+- TypeScript + Tailwind CSS v4
+- OpenAI API (structured JSON with retry + repair)
 - Playwright with fetch + cheerio fallback
 - Supabase Postgres
 
-## Local Setup (Windows Friendly)
+## Local Setup
 
 1) Install dependencies
 
@@ -65,10 +70,6 @@ create index if not exists idx_reports_created_at on public.reports (created_at 
 create index if not exists idx_reports_status on public.reports (status);
 create index if not exists idx_reports_ip_hash on public.reports (ip_hash);
 
--- If reports table already exists, add used_mock column
-alter table public.reports
-	add column if not exists used_mock boolean not null default false;
-
 create table if not exists public.leads (
 	id uuid primary key default gen_random_uuid(),
 	created_at timestamptz not null default now(),
@@ -93,7 +94,7 @@ create unique index if not exists uq_rate_limits_key on public.rate_limits (key)
 create table if not exists public.feature_requests (
 	id uuid primary key default gen_random_uuid(),
 	created_at timestamptz not null default now(),
-	type text not null check (type in ('unlock_full_audit','pdf_interest')),
+	type text not null check (type in ('unlock_full_audit','pdf_interest','waitlist')),
 	email text not null,
 	report_id uuid null references public.reports(id) on delete set null,
 	store_url text null
@@ -101,7 +102,6 @@ create table if not exists public.feature_requests (
 
 create index if not exists idx_feature_requests_created_at on public.feature_requests (created_at desc);
 create index if not exists idx_feature_requests_email on public.feature_requests (email);
-create index if not exists idx_feature_requests_type on public.feature_requests (type);
 
 create table if not exists public.optimization_requests (
 	id uuid primary key default gen_random_uuid(),
@@ -116,8 +116,6 @@ create table if not exists public.optimization_requests (
 );
 
 create index if not exists idx_optimization_requests_created_at on public.optimization_requests (created_at desc);
-create index if not exists idx_optimization_requests_email on public.optimization_requests (email);
-create index if not exists idx_optimization_requests_report_id on public.optimization_requests (report_id);
 ```
 
 4) Run the dev server
@@ -126,7 +124,7 @@ create index if not exists idx_optimization_requests_report_id on public.optimiz
 npm run dev
 ```
 
-Optional: if you want Playwright to run locally, install its browsers once:
+Optional: install Playwright browsers once for live scraping:
 
 ```bash
 npx playwright install
@@ -134,20 +132,28 @@ npx playwright install
 
 Open http://localhost:3000
 
-## Test Mode
+## How It Works
 
-If `OPENAI_API_KEY` is missing, the app returns a mocked report to keep the MVP usable.
+1. User pastes a store URL and selects page type
+2. Scraper crawls the page mobile-first (Playwright → cheerio fallback)
+3. OpenAI analyzes 15+ signals and returns a structured JSON report
+4. Report is shown after email capture (lead gate)
+5. If JSON is invalid, repair prompt is attempted; falls back to mock if needed
 
-Live Audit (Beta) is controlled from the UI toggle. When off, the app uses the mock report.
+## Health Check
 
-## Notes
+`GET /api/health` — Returns Supabase connectivity, table access, and OpenAI key status.
 
-- Playwright is used when available. If it fails, the scraper falls back to fetch + cheerio.
-- For production, move the audit processor to a background job queue.
+## Mock Mode
 
-## Future Enhancements (Post-MVP)
+If `OPENAI_API_KEY` is missing or `USE_MOCK_AI=true`, the app returns a sample report. Useful for local development and demos.
 
-- Add email notifications using Resend when going live.
-- Add Stripe billing for full audit unlock.
-- Add PDF generation.
-- Add user authentication system.
+## Roadmap (Post-MVP)
+
+- Email delivery (Resend)
+- User authentication (NextAuth/Clerk)
+- Stripe billing for Pro plan
+- Multi-page audits
+- PDF report export
+- Background job queue for audits
+- Analytics dashboard
