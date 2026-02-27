@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sora, Spectral } from "next/font/google";
+import { PlausibleScript } from "@/src/components/PlausibleScript";
 import "./globals.css";
 
 const sora = Sora({
@@ -83,6 +84,7 @@ export default function RootLayout({
       <body
         className={`${sora.variable} ${spectral.variable} antialiased`}
       >
+        <PlausibleScript />
         {children}
       </body>
     </html>
