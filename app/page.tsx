@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { trackEvent } from "@/src/lib/analytics";
 
 type PageType = "product" | "home" | "cart" | "other";
 
@@ -132,6 +133,8 @@ export default function Home() {
       return;
     }
 
+    trackEvent({ name: "url_entered", props: { url: normalizedUrl, pageType } });
+
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/audit/start", {
@@ -146,6 +149,7 @@ export default function Home() {
       }
 
       const payload = (await response.json()) as { reportId: string };
+      trackEvent({ name: "audit_started", props: { url: normalizedUrl, pageType } });
       router.push(`/audit/${payload.reportId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start audit.");
@@ -219,6 +223,7 @@ export default function Home() {
   };
 
   const scrollToForm = () => {
+    trackEvent({ name: "cta_clicked", props: { location: "bottom_cta" } });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     formRef.current?.querySelector("input")?.focus();
   };

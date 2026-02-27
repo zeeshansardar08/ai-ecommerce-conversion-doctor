@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/src/lib/analytics";
 
 export default function PricingPage() {
   const [email, setEmail] = useState("");
@@ -29,6 +30,7 @@ export default function PricingPage() {
       }
 
       setWaitlistStatus("success");
+      trackEvent({ name: "waitlist_joined", props: { plan: "pro" } });
       setEmail("");
     } catch (err) {
       setWaitlistError(

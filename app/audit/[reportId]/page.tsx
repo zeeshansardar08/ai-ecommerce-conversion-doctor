@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { trackEvent } from "@/src/lib/analytics";
 
 type AuditStatus = "queued" | "running" | "done" | "failed";
 
@@ -112,6 +113,7 @@ export default function AuditPage() {
   const searchParams = useSearchParams();
   const reportId = typeof params.reportId === "string" ? params.reportId : "";
   const [status, setStatus] = useState<AuditStatus>("queued");
+  const prevStatusRef = useRef<AuditStatus>("queued");
   const [report, setReport] = useState<AuditReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [leadCaptured, setLeadCaptured] = useState(false);
@@ -157,13 +159,25 @@ export default function AuditPage() {
         throw new Error("Unable to fetch report status.");
       }
       const payload = (await response.json()) as ReportResponse;
+      const prevStatus = prevStatusRef.current;
       setStatus(payload.status);
+      prevStatusRef.current = payload.status;
       setError(payload.error || null);
       setReport(payload.report || null);
       setLeadCaptured(Boolean(payload.leadCaptured));
       setUrl(payload.url || null);
       setPageType(payload.pageType || null);
       setPreviewMode(Boolean(payload.previewMode));
+
+      // Track status transitions (fire once)
+      if (payload.status === "done" && prevStatus !== "done") {
+        trackEvent({ name: "audit_completed", props: { reportId, score: (payload.report as AuditReport | null)?.overall_score } });
+        trackEvent({ name: "report_viewed", props: { reportId } });
+      }
+      if (payload.status === "failed" && prevStatus !== "failed") {
+        trackEvent({ name: "audit_failed", props: { reportId, error: payload.error ?? undefined } });
+      }
+
       if (payload.status === "done" && !payload.leadCaptured) {
         setShowLeadModal(true);
       }
@@ -245,6 +259,7 @@ export default function AuditPage() {
 
       setShowLeadModal(false);
       setLeadCaptured(true);
+      trackEvent({ name: "lead_captured", props: { reportId } });
       await fetchStatus();
     } catch (err) {
       setLeadError(err instanceof Error ? err.message : "Unable to save lead.");
