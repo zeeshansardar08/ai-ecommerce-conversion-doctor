@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { trackEvent } from "@/src/lib/analytics";
+import { CROSignalLogo } from "@/src/components/CROSignalLogo";
 
 export default function PricingPage() {
   const [email, setEmail] = useState("");
@@ -79,19 +80,7 @@ export default function PricingPage() {
 
       {/* header */}
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-8">
-        <a href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-white font-bold text-sm">
-            CS
-          </div>
-          <div>
-            <p className="text-base font-bold leading-tight">
-              CRO<span className="text-accent">Signal</span>
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-foreground/45 font-medium">
-              AI Conversion Audits
-            </p>
-          </div>
-        </a>
+        <CROSignalLogo linkHome />
         <a
           href="/"
           className="rounded-full border border-border px-4 py-2 text-sm font-medium transition hover:border-accent hover:text-accent"

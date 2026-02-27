@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackEvent } from "@/src/lib/analytics";
+import { CROSignalLogo } from "@/src/components/CROSignalLogo";
 
 type PageType = "product" | "home" | "cart" | "other";
 
@@ -271,19 +272,7 @@ export default function Home() {
 
       {/* ── header ── */}
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-8">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-white font-bold text-sm">
-            CS
-          </div>
-          <div>
-            <p className="text-base font-bold leading-tight">
-              CRO<span className="text-accent">Signal</span>
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-foreground/45 font-medium">
-              AI Conversion Audits
-            </p>
-          </div>
-        </div>
+        <CROSignalLogo />
         <a
           href="/pricing"
           className="rounded-full border border-border px-4 py-2 text-sm font-medium transition hover:border-accent hover:text-accent"
@@ -628,7 +617,10 @@ export default function Home() {
       {/* ── footer ── */}
       <footer className="relative z-10 border-t border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8 text-xs text-foreground/40">
-          <span>© {new Date().getFullYear()} CROSignal</span>
+          <div className="flex items-center gap-2">
+            <CROSignalLogo size="sm" linkHome />
+            <span className="ml-2">© {new Date().getFullYear()}</span>
+          </div>
           <div className="flex gap-4">
             <a
               href="/pricing"

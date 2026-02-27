@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CROSignalLogo } from "@/src/components/CROSignalLogo";
 
 /* ───────────────── types ───────────────── */
 
@@ -312,9 +313,13 @@ export default function AdminPage() {
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10">
         {/* header */}
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">CROSignal Admin</h1>
-            <p className="text-sm text-foreground/50">Founder analytics dashboard</p>
+          <div className="flex items-center gap-4">
+            <CROSignalLogo size="sm" linkHome />
+            <div className="h-8 w-px bg-border" />
+            <div>
+              <h1 className="text-2xl font-bold">Admin</h1>
+              <p className="text-sm text-foreground/50">Founder analytics dashboard</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <a

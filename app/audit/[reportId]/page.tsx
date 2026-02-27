@@ -3,6 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackEvent } from "@/src/lib/analytics";
+import { CROSignalLogo } from "@/src/components/CROSignalLogo";
 
 type AuditStatus = "queued" | "running" | "done" | "failed";
 
@@ -477,19 +478,7 @@ export default function AuditPage() {
       <div className="pointer-events-none absolute inset-0 grain" />
 
       <header className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-between px-6 pt-8">
-        <a href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-white font-bold text-sm">
-            CS
-          </div>
-          <div>
-            <p className="text-base font-bold leading-tight">
-              CRO<span className="text-accent">Signal</span>
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-foreground/45 font-medium">
-              AI Conversion Audits
-            </p>
-          </div>
-        </a>
+        <CROSignalLogo linkHome />
         <a
           href="/"
           className="rounded-full border border-border px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-foreground/60 transition hover:border-accent hover:text-accent"
