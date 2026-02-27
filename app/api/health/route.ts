@@ -4,36 +4,68 @@ import { getSupabaseAdmin } from "@/src/lib/supabase";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const isMissingTableError = (message: string) => {
-  return message.includes("does not exist") && message.includes("relation");
-};
+const isMissingTableError = (message: string) =>
+  message.includes("does not exist") && message.includes("relation");
 
 export async function GET() {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  let supabaseConnected = false;
-  let tablesReachable = false;
+  const status: Record<string, unknown> = {
+    ok: true,
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+    supabase_connected: false,
+    tables: {
+      reports: false,
+      rate_limits: false,
+      leads: false,
+    },
+    openai_key_set: Boolean(process.env.OPENAI_API_KEY),
+  };
 
   try {
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("reports").select("id").limit(1);
 
-    if (!error) {
-      supabaseConnected = true;
-      tablesReachable = true;
-    } else if (isMissingTableError(error.message)) {
-      supabaseConnected = true;
-      tablesReachable = false;
-    } else {
-      supabaseConnected = false;
-      tablesReachable = false;
+    // Check reports table
+    const { error: reportsErr } = await supabase
+      .from("reports")
+      .select("id")
+      .limit(1);
+    if (!reportsErr) {
+      status.supabase_connected = true;
+      (status.tables as Record<string, boolean>).reports = true;
+    } else if (isMissingTableError(reportsErr.message)) {
+      status.supabase_connected = true;
     }
-  } catch {
-    supabaseConnected = false;
-    tablesReachable = false;
+
+    // Check rate_limits table
+    const { error: rlErr } = await supabase
+      .from("rate_limits")
+      .select("id")
+      .limit(1);
+    if (!rlErr) {
+      (status.tables as Record<string, boolean>).rate_limits = true;
+    }
+
+    // Check leads table
+    const { error: leadsErr } = await supabase
+      .from("leads")
+      .select("id")
+      .limit(1);
+    if (!leadsErr) {
+      (status.tables as Record<string, boolean>).leads = true;
+    }
+  } catch (err) {
+    status.ok = false;
+    status.supabase_connected = false;
+    status.error =
+      err instanceof Error ? err.message : "Failed to connect to Supabase";
   }
 
-  return NextResponse.json({ supabaseConnected, tablesReachable });
+  // Mark overall status
+  const tables = status.tables as Record<string, boolean>;
+  if (!tables.reports || !tables.rate_limits) {
+    status.ok = false;
+  }
+
+  const httpStatus = status.ok ? 200 : 503;
+  return NextResponse.json(status, { status: httpStatus });
 }

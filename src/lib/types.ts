@@ -28,6 +28,22 @@ export type ScrapedPage = {
   totalTextLength: number;
   mainTextSample: string;
   detectedPlatform: "shopify" | "woocommerce" | "unknown";
+  /* ── additional signals (v2) ── */
+  canonicalUrl: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  viewportMetaPresent: boolean;
+  wordCountEstimate: number;
+  aboveFoldTextSample: string;
+  primaryCtaText: string | null;
+  addToCartPresent: boolean;
+  pricePresent: boolean;
+  priceSample: string | null;
+  shippingReturnsTextSample: string | null;
+  reviewsCountHint: number | null;
+  currencyDetected: string | null;
+  internalLinksCount: number;
+  externalLinksCount: number;
 };
 
 export type AuditReport = {
@@ -44,6 +60,7 @@ export type AuditReport = {
     title: string;
     why_it_matters: string;
     how_to_fix: string;
+    where_to_fix: string;
     estimated_effort: "S" | "M" | "L";
   }[];
   findings: {
@@ -52,7 +69,10 @@ export type AuditReport = {
     category: "CRO" | "Trust" | "Copy" | "Mobile UX" | "Performance" | "SEO";
     severity: "High" | "Medium" | "Low";
     impact: "High" | "Medium" | "Low";
+    confidence: "High" | "Medium" | "Low";
     evidence: string;
+    where_to_fix: string;
+    what_to_change: string;
     recommendation: string;
     estimated_effort: "S" | "M" | "L";
   }[];
