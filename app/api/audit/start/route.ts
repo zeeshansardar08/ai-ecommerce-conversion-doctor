@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/src/lib/supabase";
-import { generateReport } from "@/src/lib/openai";
-import { scrapePage } from "@/src/lib/scraper";
 import { checkRateLimit, hashIp } from "@/src/lib/rateLimit";
 import { validateUrl, normalizeUrl } from "@/src/lib/validators";
 import type { Database } from "@/src/lib/database.types";
@@ -72,44 +70,27 @@ const userFriendlyError = (message: string): string => {
   return "Something went wrong. Please try again later.";
 };
 
-/* ────────────────────────── process audit ────────────────────────── */
+/* ────────────────────────── trigger queue worker ────────────────────────── */
 
-const processAudit = async (
-  reportId: string,
-  url: string,
-  pageType: PageType,
-  useLiveAudit: boolean
-) => {
-  const supabase = getSupabaseAdmin();
-  await supabase
-    .from("reports")
-    .update({ status: "running" })
-    .eq("id", reportId);
-
+/**
+ * Fire-and-forget call to the queue processor.
+ * This triggers immediate processing of the just-queued report.
+ * If it fails, the Vercel Cron safety net picks it up within 1 minute.
+ */
+const triggerQueueWorker = (request: Request) => {
   try {
-    const scraped = await scrapePage(url);
-    await supabase
-      .from("reports")
-      .update({ scraped_json: scraped })
-      .eq("id", reportId);
-
-    const { report, usedMock } = await generateReport(scraped, pageType, {
-      useLiveAudit,
+    const origin =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      request.headers.get("origin") ||
+      new URL(request.url).origin;
+    void fetch(`${origin}/api/audit/process`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    }).catch((err) => {
+      console.error("[audit/start] failed to trigger queue worker:", err);
     });
-
-    await supabase
-      .from("reports")
-      .update({ status: "done", result_json: report, used_mock: usedMock })
-      .eq("id", reportId);
-  } catch (error) {
-    const rawMsg = error instanceof Error ? error.message : "Audit failed";
-    await supabase
-      .from("reports")
-      .update({
-        status: "failed",
-        error: userFriendlyError(rawMsg),
-      })
-      .eq("id", reportId);
+  } catch {
+    // Non-critical — cron will pick it up
   }
 };
 
@@ -217,12 +198,8 @@ export async function POST(request: Request) {
       );
     }
 
-    void processAudit(
-      data.id,
-      validation.normalized,
-      body.pageType,
-      Boolean(body.useLiveAudit)
-    );
+    /* ── trigger queue worker for immediate processing ── */
+    triggerQueueWorker(request);
 
     return NextResponse.json({ reportId: data.id });
   } catch (error) {
