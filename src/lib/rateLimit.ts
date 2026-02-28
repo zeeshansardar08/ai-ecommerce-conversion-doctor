@@ -29,7 +29,10 @@ export const checkRateLimit = async (key: string) => {
   if (!data || new Date(data.reset_at) <= now) {
     const { error: upsertError } = await supabase
       .from("rate_limits")
-      .upsert({ key, count: 1, reset_at: resetAt.toISOString() });
+      .upsert(
+        { key, count: 1, reset_at: resetAt.toISOString() },
+        { onConflict: "key" }
+      );
 
     if (upsertError) {
       throw new Error(`Unable to set rate limit: ${upsertError.message}`);
