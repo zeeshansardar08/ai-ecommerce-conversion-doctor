@@ -83,9 +83,15 @@ const triggerQueueWorker = (request: Request) => {
       process.env.NEXT_PUBLIC_BASE_URL ||
       request.headers.get("origin") ||
       new URL(request.url).origin;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (process.env.CRON_SECRET) {
+      headers["authorization"] = `Bearer ${process.env.CRON_SECRET}`;
+    }
     void fetch(`${origin}/api/audit/process`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
     }).catch((err) => {
       console.error("[audit/start] failed to trigger queue worker:", err);
     });
