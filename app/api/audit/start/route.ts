@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/src/lib/supabase";
 import { checkRateLimit, hashIp } from "@/src/lib/rateLimit";
 import { validateUrl, normalizeUrl } from "@/src/lib/validators";
+import { generateReport } from "@/src/lib/openai";
+import { scrapePage } from "@/src/lib/scraper";
 import type { Database } from "@/src/lib/database.types";
 import type { PageType } from "@/src/lib/types";
 
@@ -68,30 +70,6 @@ const userFriendlyError = (message: string): string => {
     return "The page took too long to load. Please try again or use a different URL.";
   }
   return "Something went wrong. Please try again later.";
-};
-
-/* ────────────────────────── trigger queue worker ────────────────────────── */
-
-/**
- * Fire-and-forget call to the queue processor.
- * This triggers immediate processing of the just-queued report.
- * If it fails, the Vercel Cron safety net picks it up within 1 minute.
- */
-const triggerQueueWorker = (request: Request) => {
-  try {
-    const origin =
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      request.headers.get("origin") ||
-      new URL(request.url).origin;
-    void fetch(`${origin}/api/audit/process`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    }).catch((err) => {
-      console.error("[audit/start] failed to trigger queue worker:", err);
-    });
-  } catch {
-    // Non-critical — cron will pick it up
-  }
 };
 
 /* ────────────────────────── POST handler ────────────────────────── */
@@ -167,7 +145,7 @@ export async function POST(request: Request) {
         .eq("url", cacheUrl)
         .eq("page_type", body.pageType)
         .gte("created_at", cutoff)
-        .in("status", ["done", "running", "queued"])
+        .in("status", ["done", "running"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle<Pick<ReportRow, "id" | "status">>();
@@ -183,7 +161,7 @@ export async function POST(request: Request) {
       .insert({
         url: cacheUrl,
         page_type: body.pageType,
-        status: "queued",
+        status: "running",
         lead_captured: false,
         ip_hash: ipHash,
       })
@@ -198,8 +176,37 @@ export async function POST(request: Request) {
       );
     }
 
-    /* ── trigger queue worker for immediate processing ── */
-    triggerQueueWorker(request);
+    /* ── process directly: scrape → AI → save ── */
+    try {
+      console.log(`[audit/start] processing ${data.id} (${cacheUrl})`);
+
+      const scraped = await scrapePage(cacheUrl);
+      await supabase
+        .from("reports")
+        .update({ scraped_json: scraped })
+        .eq("id", data.id);
+
+      const { report, usedMock } = await generateReport(
+        scraped,
+        body.pageType,
+        { useLiveAudit: body.useLiveAudit ?? true }
+      );
+
+      await supabase
+        .from("reports")
+        .update({ status: "done", result_json: report, used_mock: usedMock })
+        .eq("id", data.id);
+
+      console.log(`[audit/start] completed ${data.id}`);
+    } catch (processError) {
+      const rawMsg = processError instanceof Error ? processError.message : "Audit processing failed";
+      console.error(`[audit/start] processing failed ${data.id}:`, rawMsg);
+
+      await supabase
+        .from("reports")
+        .update({ status: "failed", error: userFriendlyError(rawMsg) })
+        .eq("id", data.id);
+    }
 
     return NextResponse.json({ reportId: data.id });
   } catch (error) {

@@ -120,7 +120,7 @@ function friendlyErrorMessage(error: string | null): string {
     return "You\u2019ve run several audits recently. Please wait a few minutes before trying again.";
   if (lower.includes("not found") || lower.includes("404"))
     return "We couldn\u2019t find that page. Please double-check the URL and try again.";
-  if (lower.includes("openai") || lower.includes("ai") || lower.includes("model"))
+  if (lower.includes("openai") || /\bai\b/.test(lower) || lower.includes("model"))
     return "Our AI analysis service is temporarily unavailable. Please try again in a minute.";
   return "Something went wrong while analyzing your page. This can happen with temporary network issues or server load.";
 }
